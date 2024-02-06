@@ -1,0 +1,23 @@
+@import 'variables';
+@import 'mixins';
+
+body {
+    font-family: fantasy;
+    @include full-scale;
+    margin: 0;
+    padding: 0;
+}
+
+.main {
+    @include full-scale;
+    @include flex-center;
+
+    min-height: 100vh;
+
+    .playground {
+        width: 350px;
+        height: 350px;
+        background-color: $seconary_color;
+        color: $white;
+    }
+}
