@@ -1,0 +1,26 @@
+@import 'variables';
+@import 'mixins';
+
+* {
+    font-family: fantasy;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    @include full-scale;
+    background-color: #1b1b1b
+}
+
+.main {
+    @include full-scale;
+    @include flex-center;
+
+    min-height: 100vh;
+
+    .gameBoard {
+        background-color: $secondary_color;
+        color: $white;
+        border: 10px solid $grey;
+    }
+}
