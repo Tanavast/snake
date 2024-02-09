@@ -1,13 +1,13 @@
 import React, { useRef, useEffect, useState } from 'react';
 
-const GameBoard = () => {
+const GameBoard = ({ gameStatus, setGameStatus }) => {
     const canvasRef = useRef(null);
 
     const initialState = [{ x: 19, y: 10 }, { x: 20, y: 10 }, { x: 21, y: 10 }];
     const [snakeState, setSnakeState] = useState(initialState);
     const [intervalId, setIntervalId] = useState(null);
-    const [direction, setDirection] = useState("right");
-    const [gameStatus, setGameStatus] = useState(true);
+    const [directionQueue, setDirectionyQueue] = useState([]);
+    const [direction, setDirection] = useState("left");
     const [foodState, setFoodState] = useState(null)
 
     const cellSize = 20;
@@ -26,28 +26,39 @@ const GameBoard = () => {
     }
     const wallCells = gameBoard.filter(cell => cell.isWall);
 
-    const handleKeyPress = (event) => {
-        switch (event.code) {
-            case 'ArrowUp':
-                direction !== "bottom" ? setDirection("top") : console.log('Wrong direction')
-                break;
-            case 'ArrowDown':
-                direction !== "top" ? setDirection("bottom") : console.log('Wrong direction')
-                break;
-            case 'ArrowLeft':
-                direction !== "right" ? setDirection("left") : console.log('Wrong direction')
-                break;
-            case 'ArrowRight':
-                direction !== "left" ? setDirection("right") : console.log('Wrong direction')
-                break;
-            default:
-                break;
+
+    const addKeyToQueue = (event) => {
+        setDirectionyQueue((queue) => [...queue, event.code]);
+    }
+
+    const handleKeyPress = (directionQueue) => {
+        let queue = [...directionQueue]
+        for (let i = 0; i < queue.length; i++) {
+            const code = queue.pop();
+            console.log(code)
+            switch (code) {
+                case 'ArrowUp':
+                    direction !== "bottom" ? setDirection("top") : console.log('Wrong direction')
+                    break;
+                case 'ArrowDown':
+                    direction !== "top" ? setDirection("bottom") : console.log('Wrong direction')
+                    break;
+                case 'ArrowLeft':
+                    direction !== "right" ? setDirection("left") : console.log('Wrong direction')
+                    break;
+                case 'ArrowRight':
+                    direction !== "left" ? setDirection("right") : console.log('Wrong direction')
+                    break;
+                default:
+                    break;
+            }
         }
+        setDirectionyQueue(queue)
     }
 
     // Function for move snake
     const moveSnake = (snake, direction) => {
-        const currentSnake = snake;
+        const currentSnake = [...snake];
         let head = { ...currentSnake[0] };
         switch (direction) {
             case "right":
@@ -71,8 +82,15 @@ const GameBoard = () => {
                 return alert('Game over!')
             }
         })
+        let snakeBody = [...currentSnake].splice(0, 1)
+        snakeBody.forEach(cell => {
+            if (head.x === cell.x && head.y === cell.y) {
+                setGameStatus(false)
+                return alert('Game over!')
+            }
+        })
         currentSnake.unshift(head)
-        head.x !== foodState?.x || head.y !== foodState?.y ? currentSnake.pop() : setFoodState(null)
+        head.x !== foodState?.x || head.y !== foodState?.y ? currentSnake.pop() : setFoodState(null);
         setSnakeState(currentSnake)
     }
 
@@ -87,10 +105,83 @@ const GameBoard = () => {
         });
     };
 
-    // Function to draw snake       
-    const drawSnake = (snake, ctx) => {
-        ctx.fillStyle = "#72C26F"
+    const drawHead = (snake, ctx, direction) => {
         ctx.fillRect(snake.x * 20, snake.y * 20, cellSize, cellSize);
+        ctx.fillStyle = "#000"
+        switch (direction) {
+            case "left":
+                ctx.fillRect((snake.x + 0.2) * 20, (snake.y + 0.14) * 20, cellSize - 17, cellSize - 17);
+                ctx.fillRect((snake.x + 0.2) * 20, (snake.y + 0.7) * 20, cellSize - 17, cellSize - 17);
+                break;
+            case "right":
+                ctx.fillRect((snake.x + 0.65) * 20, (snake.y + 0.14) * 20, cellSize - 17, cellSize - 17);
+                ctx.fillRect((snake.x + 0.65) * 20, (snake.y + 0.7) * 20, cellSize - 17, cellSize - 17);
+                break;
+            case "top":
+                ctx.fillRect((snake.x + 0.2) * 20, (snake.y + 0.14) * 20, cellSize - 17, cellSize - 17);
+                ctx.fillRect((snake.x + 0.65) * 20, (snake.y + 0.14) * 20, cellSize - 17, cellSize - 17);
+                break;
+            case "bottom":
+                ctx.fillRect((snake.x + 0.65) * 20, (snake.y + 0.7) * 20, cellSize - 17, cellSize - 17);
+                ctx.fillRect((snake.x + 0.2) * 20, (snake.y + 0.7) * 20, cellSize - 17, cellSize - 17);
+                break;
+            default:
+                break;
+        }
+    }
+
+    const getTailDirection = (bodyCoords, tailCoords) => {
+        if (tailCoords.x > bodyCoords.x) {
+            return 'right';
+        }
+        if (tailCoords.x < bodyCoords.x) {
+            return 'left';
+        }
+        if (tailCoords.y > bodyCoords.y) {
+            return 'bottom';
+        }
+        if (tailCoords.y < bodyCoords.y) {
+            return 'top';
+        }
+    }
+
+    const drawTail = (snake, ctx) => {
+        ctx.fillRect(snake.x * 20, snake.y * 20, cellSize, cellSize);
+        ctx.fillStyle = "#000"
+
+        let nextDirection = getTailDirection(snake, snakeState[snakeState.length - 2])
+        switch (nextDirection) {
+            case "left":
+                ctx.fillRect((snake.x + 0.2) * 20, (snake.y + 0.45) * 20, cellSize, cellSize - 18);
+                break;
+            case "right":
+                ctx.fillRect((snake.x - 0.2) * 20, (snake.y + 0.45) * 20, cellSize, cellSize - 18);
+                break;
+            case "top":
+                ctx.fillRect((snake.x + 0.45) * 20, (snake.y + 0.2) * 20, cellSize - 18, cellSize);
+                break;
+            case "bottom":
+                ctx.fillRect((snake.x + 0.45) * 20, (snake.y - 0.2) * 20, cellSize - 18, cellSize);
+                break;
+            default:
+                break;
+        }
+    }
+
+    // Function to draw snake       
+    const drawSnake = (snake, ctx, bodyPart) => {
+        ctx.fillStyle = "#72C26F"
+        if (!bodyPart) {
+            return ctx.fillRect(snake.x * 20, snake.y * 20, cellSize, cellSize);
+        }
+        if (bodyPart === "head") {
+            drawHead(snake, ctx, direction)
+            return
+        }
+        if (bodyPart === "tail") {
+            drawTail(snake, ctx)
+            return
+        }
     }
 
     const getRandomInt = (max) => {
@@ -101,18 +192,19 @@ const GameBoard = () => {
     const generateCoordForFood = (gameBoard, snake) => {
         let x = getRandomInt(39);
         let y = getRandomInt(19);
-        wallCells.forEach(cell => {
-            if (x === cell.x && y === cell.y) {
-                return generateCoordForFood(gameBoard, snake)
+
+        for (let i = 0; i < wallCells.length; i++) {
+            if (x === wallCells[i].x && y === wallCells[i].y) {
+                return generateCoordForFood(gameBoard, snake);
             }
-        })
-        snakeState.forEach(cell => {
-            if (x === cell.x && y === cell.y) {
-                return generateCoordForFood(gameBoard, snake)
+        }
+
+        for (let i = 0; i < snakeState.length; i++) {
+            if (x === snakeState[i].x && y === snakeState[i].y) {
+                return generateCoordForFood(gameBoard, snake);
             }
-        })
+        }
         let food = { x, y };
-        console.log(food)
         setFoodState(food)
         return food
     }
@@ -131,36 +223,35 @@ const GameBoard = () => {
         canvas.width = cellSize * numCols;
         canvas.height = cellSize * numRows;
         drawGrid(ctx)
-        // moveSnake(snake, direction);
-        snake.map(item => {
+        snake.map((item, i) => {
+            if (i === 0) {
+                return drawSnake(item, ctx, "head")
+            }
+            if (i === snake.length - 1) {
+                return drawSnake(item, ctx, "tail")
+            }
             return drawSnake(item, ctx)
         })
 
-        foodState ? generateFood(foodState, ctx) : generateFood(generateCoordForFood(gameBoard, snake), ctx)
+        window.addEventListener('keydown', addKeyToQueue);
 
-        window.addEventListener('keydown', handleKeyPress);
-
-        // Transform snake
-        const interval = setInterval(() => {
-            if (!gameStatus) {
-                clearInterval(interval);
-            }
-            drawGrid(ctx)
-            moveSnake(snake, direction);
-            snake.map(item => {
-                return drawSnake(item, ctx)
-            })
+        if (gameStatus) {
             foodState ? generateFood(foodState, ctx) : generateFood(generateCoordForFood(gameBoard, snake), ctx)
+            handleKeyPress(directionQueue)
+            // Transform snake
+            const interval = setInterval(() => {
+                moveSnake(snake, direction);
+            }, 200);
 
-        }, 300);
+            setIntervalId(interval);
 
-        setIntervalId(interval);
+            return () => {
+                clearInterval(interval);
+                window.removeEventListener('keydown', addKeyToQueue);
+            }
 
-        return () => {
-            clearInterval(interval);
-            window.removeEventListener('keydown', handleKeyPress);
         }
-    }, [gameStatus, direction, foodState]);
+    }, [snakeState, direction, gameStatus]);
 
     return <canvas ref={canvasRef} className='gameBoard' />;
 };
