@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 
-const GameBoard = ({ gameStatus, setGameStatus }) => {
+const GameBoard = ({ gameStatus, setGameStatus, isFirstStart }) => {
     const canvasRef = useRef(null);
 
     const initialState = [{ x: 19, y: 10 }, { x: 20, y: 10 }, { x: 21, y: 10 }];
@@ -33,9 +33,8 @@ const GameBoard = ({ gameStatus, setGameStatus }) => {
 
     const handleKeyPress = (directionQueue) => {
         let queue = [...directionQueue]
-        for (let i = 0; i < queue.length; i++) {
+        while (queue.length > 0) {
             const code = queue.pop();
-            console.log(code)
             switch (code) {
                 case 'ArrowUp':
                     direction !== "bottom" ? setDirection("top") : console.log('Wrong direction')
@@ -76,19 +75,18 @@ const GameBoard = ({ gameStatus, setGameStatus }) => {
             default:
                 break;
         }
-        wallCells.forEach(cell => {
-            if (head.x === cell.x && head.y === cell.y) {
-                setGameStatus(false)
-                return alert('Game over!')
+        for (let i = 0; i < wallCells.length; i++) {
+            if (head.x === wallCells[i].x && head.y === wallCells[i].y) {
+                return setGameStatus(false)
             }
-        })
-        let snakeBody = [...currentSnake].splice(0, 1)
-        snakeBody.forEach(cell => {
-            if (head.x === cell.x && head.y === cell.y) {
-                setGameStatus(false)
-                return alert('Game over!')
+        }
+        let snakeBody = [...currentSnake]
+        snakeBody.shift()
+        for (let j = 0; j < snakeBody.length; j++) {
+            if (head.x === snakeBody[j].x && head.y === snakeBody[j].y) {
+                return setGameStatus(false)
             }
-        })
+        }
         currentSnake.unshift(head)
         head.x !== foodState?.x || head.y !== foodState?.y ? currentSnake.pop() : setFoodState(null);
         setSnakeState(currentSnake)
@@ -107,7 +105,7 @@ const GameBoard = ({ gameStatus, setGameStatus }) => {
 
     const drawHead = (snake, ctx, direction) => {
         ctx.fillRect(snake.x * 20, snake.y * 20, cellSize, cellSize);
-        ctx.fillStyle = "#000"
+        ctx.fillStyle = "#000";
         switch (direction) {
             case "left":
                 ctx.fillRect((snake.x + 0.2) * 20, (snake.y + 0.14) * 20, cellSize - 17, cellSize - 17);
@@ -223,25 +221,27 @@ const GameBoard = ({ gameStatus, setGameStatus }) => {
         canvas.width = cellSize * numCols;
         canvas.height = cellSize * numRows;
         drawGrid(ctx)
-        snake.map((item, i) => {
-            if (i === 0) {
-                return drawSnake(item, ctx, "head")
-            }
-            if (i === snake.length - 1) {
-                return drawSnake(item, ctx, "tail")
-            }
-            return drawSnake(item, ctx)
-        })
 
         window.addEventListener('keydown', addKeyToQueue);
 
+
         if (gameStatus) {
+            snake.map((item, i) => {
+                if (i === 0) {
+                    return drawSnake(item, ctx, "head")
+                }
+                if (i === snake.length - 1) {
+                    return drawSnake(item, ctx, "tail")
+                }
+                return drawSnake(item, ctx)
+            })
+
             foodState ? generateFood(foodState, ctx) : generateFood(generateCoordForFood(gameBoard, snake), ctx)
-            handleKeyPress(directionQueue)
-            // Transform snake
+
             const interval = setInterval(() => {
                 moveSnake(snake, direction);
-            }, 200);
+            }, 300);
+            handleKeyPress(directionQueue)
 
             setIntervalId(interval);
 
@@ -250,7 +250,19 @@ const GameBoard = ({ gameStatus, setGameStatus }) => {
                 window.removeEventListener('keydown', addKeyToQueue);
             }
 
+        } else if (isFirstStart) {
+            ctx.font = "30px Arial";
+            ctx.textAlign = "center"
+            ctx.fillStyle = "#fff";
+            ctx.fillText('Please press "Start"', 400, 200);
+        } else {
+            ctx.font = "30px Arial";
+            ctx.textAlign = "center"
+            ctx.fillStyle = "#fff";
+            ctx.fillText("Game paused", 400, 200);
         }
+
+
     }, [snakeState, direction, gameStatus]);
 
     return <canvas ref={canvasRef} className='gameBoard' />;
