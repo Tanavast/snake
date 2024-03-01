@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 
-const GameBoard = ({ gameStatus, setGameStatus, isFirstStart }) => {
+const GameBoard = ({ gameStatus, setGameStatus, isFirstStart, setFirstStart, gameOver, setGameOver }) => {
     const canvasRef = useRef(null);
 
     const initialState = [{ x: 19, y: 10 }, { x: 20, y: 10 }, { x: 21, y: 10 }];
@@ -14,6 +14,17 @@ const GameBoard = ({ gameStatus, setGameStatus, isFirstStart }) => {
     const numRows = 20;
     const numCols = 40;
 
+    const handleGameOver = () => {
+        setGameStatus(false)
+        setGameOver(true)
+        setSnakeState(initialState)
+        setDirectionyQueue([])
+        setDirection("left")
+        setFoodState(null)
+        setFirstStart(true)
+    }
+
+    // Draw game Board
     const gameBoard = [];
     for (let row = 0; row < numRows; row++) {
         for (let col = 0; col < numCols; col++) {
@@ -26,11 +37,23 @@ const GameBoard = ({ gameStatus, setGameStatus, isFirstStart }) => {
     }
     const wallCells = gameBoard.filter(cell => cell.isWall);
 
+    // Function to draw grid lines
+    const drawGrid = (ctx) => {
+        gameBoard.forEach(cell => {
+            ctx.beginPath();
+            ctx.rect(cell.x * cellSize, cell.y * cellSize, cellSize, cellSize);
+            ctx.fillStyle = cell.isWall ? 'gray' : '#245C4F';
+            ctx.fill();
+            ctx.stroke();
+        });
+    };
 
+    // Key queue for each keypress handling
     const addKeyToQueue = (event) => {
         setDirectionyQueue((queue) => [...queue, event.code]);
     }
 
+    // Key press handling
     const handleKeyPress = (directionQueue) => {
         let queue = [...directionQueue]
         while (queue.length > 0) {
@@ -55,7 +78,7 @@ const GameBoard = ({ gameStatus, setGameStatus, isFirstStart }) => {
         setDirectionyQueue(queue)
     }
 
-    // Function for move snake
+    // Functions for make snake move
     const moveSnake = (snake, direction) => {
         const currentSnake = [...snake];
         let head = { ...currentSnake[0] };
@@ -75,33 +98,24 @@ const GameBoard = ({ gameStatus, setGameStatus, isFirstStart }) => {
             default:
                 break;
         }
+        // If head coors are equal to coords of the wall - game is over
         for (let i = 0; i < wallCells.length; i++) {
             if (head.x === wallCells[i].x && head.y === wallCells[i].y) {
-                return setGameStatus(false)
+                return handleGameOver()
             }
         }
         let snakeBody = [...currentSnake]
         snakeBody.shift()
+        // If head coors are equal to coords of the body - game is over
         for (let j = 0; j < snakeBody.length; j++) {
             if (head.x === snakeBody[j].x && head.y === snakeBody[j].y) {
-                return setGameStatus(false)
+                return handleGameOver()
             }
         }
         currentSnake.unshift(head)
         head.x !== foodState?.x || head.y !== foodState?.y ? currentSnake.pop() : setFoodState(null);
         setSnakeState(currentSnake)
     }
-
-    // Function to draw grid lines
-    const drawGrid = (ctx) => {
-        gameBoard.forEach(cell => {
-            ctx.beginPath();
-            ctx.rect(cell.x * cellSize, cell.y * cellSize, cellSize, cellSize);
-            ctx.fillStyle = cell.isWall ? 'gray' : '#245C4F';
-            ctx.fill();
-            ctx.stroke();
-        });
-    };
 
     const drawHead = (snake, ctx, direction) => {
         ctx.fillRect(snake.x * 20, snake.y * 20, cellSize, cellSize);
@@ -166,7 +180,6 @@ const GameBoard = ({ gameStatus, setGameStatus, isFirstStart }) => {
         }
     }
 
-    // Function to draw snake       
     const drawSnake = (snake, ctx, bodyPart) => {
         ctx.fillStyle = "#72C26F"
         if (!bodyPart) {
@@ -182,11 +195,12 @@ const GameBoard = ({ gameStatus, setGameStatus, isFirstStart }) => {
         }
     }
 
+    // Generate food in random free cell
+
     const getRandomInt = (max) => {
         return Math.floor(Math.random() * max)
     }
 
-    // Generate food in random free cell
     const generateCoordForFood = (gameBoard, snake) => {
         let x = getRandomInt(39);
         let y = getRandomInt(19);
@@ -224,7 +238,7 @@ const GameBoard = ({ gameStatus, setGameStatus, isFirstStart }) => {
 
         window.addEventListener('keydown', addKeyToQueue);
 
-
+        // If the game is active, we update our board at the specified time interval
         if (gameStatus) {
             snake.map((item, i) => {
                 if (i === 0) {
@@ -240,7 +254,7 @@ const GameBoard = ({ gameStatus, setGameStatus, isFirstStart }) => {
 
             const interval = setInterval(() => {
                 moveSnake(snake, direction);
-            }, 300);
+            }, 100);
             handleKeyPress(directionQueue)
 
             setIntervalId(interval);
@@ -251,11 +265,13 @@ const GameBoard = ({ gameStatus, setGameStatus, isFirstStart }) => {
             }
 
         } else if (isFirstStart) {
+            // If game is inactive and there were no activations
             ctx.font = "30px Arial";
             ctx.textAlign = "center"
             ctx.fillStyle = "#fff";
             ctx.fillText('Please press "Start"', 400, 200);
         } else {
+            // If game paused
             ctx.font = "30px Arial";
             ctx.textAlign = "center"
             ctx.fillStyle = "#fff";
